@@ -28,7 +28,6 @@ class ProductExtractor : RawDataExtractor {
 
     override suspend fun onStart(context: MutableMap<String, Any?>) = logger.info("init ProductExtractor..")
 
-
     override suspend fun onNext(context: MutableMap<String, Any?>, row: Row, index: Int) {
         logger.info("start processing product with row: {} -> {}", index, row)
         delay(1000)
@@ -46,6 +45,7 @@ class ProductExtractor : RawDataExtractor {
 
 @Component
 class ShopExtractor : RawDataExtractor {
+
     override suspend fun onStart(context: MutableMap<String, Any?>) = logger.info("init ShopExtractor..")
 
     override suspend fun onNext(context: MutableMap<String, Any?>, row: Row, index: Int) {
