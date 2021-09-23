@@ -54,3 +54,29 @@ class ClassPlay : ApplicationRunner {
     }
 
 }
+
+/*
+*
+class      	topLevelLambda	me.danielpf.springplaykt.ClassPlayKt$topLevelLambda$1
+super-class	topLevelLambda	kotlin.jvm.internal.Lambda
+interfaces	topLevelLambda	kotlin.jvm.functions.Function0, kotlin.jvm.internal.FunctionBase, java.io.Serializable
+class      	propertyLambda	me.danielpf.springplaykt.ClassPlay$propertyLambda$1
+super-class	propertyLambda	kotlin.jvm.internal.Lambda
+interfaces	propertyLambda	kotlin.jvm.functions.Function0, kotlin.jvm.internal.FunctionBase, java.io.Serializable
+class      	localLambda	me.danielpf.springplaykt.ClassPlay$run$localLambda$1
+super-class	localLambda	kotlin.jvm.internal.Lambda
+interfaces	localLambda	kotlin.jvm.functions.Function0, kotlin.jvm.internal.FunctionBase, java.io.Serializable
+class      	topLevelObject	me.danielpf.springplaykt.ClassPlayKt$topLevelObject$1
+super-class	topLevelObject	java.lang.Object
+interfaces	topLevelObject
+class      	propertyObject	me.danielpf.springplaykt.ClassPlay$propertyObject$1
+super-class	propertyObject	java.lang.Object
+interfaces	propertyObject
+class      	localObject	me.danielpf.springplaykt.ClassPlay$run$localObject$1
+super-class	localObject	java.lang.Object
+interfaces	localObject
+class      	companionObject	me.danielpf.springplaykt.ClassPlay$CompanionObject
+super-class	companionObject	java.lang.Object
+interfaces	companionObject
+*
+* */
