@@ -12,6 +12,10 @@ private val topLevelObject = object {
     val age = 10
 }
 
+open class Foo
+
+class Bar : Foo()
+
 @Component
 class ClassPlay : ApplicationRunner {
 
@@ -51,9 +55,15 @@ class ClassPlay : ApplicationRunner {
 
         printClass("companionObject", CompanionObject)
 
+        val foo = Foo()
+        printClass("foo", foo)
+        val bar = Bar()
+        printClass("bar", bar)
+
     }
 
 }
+
 
 /*
 *
@@ -78,5 +88,11 @@ interfaces	localObject
 class      	companionObject	me.danielpf.springplaykt.ClassPlay$CompanionObject
 super-class	companionObject	java.lang.Object
 interfaces	companionObject
+class      	foo	me.danielpf.springplaykt.Foo
+super-class	foo	java.lang.Object
+interfaces	foo
+class      	bar	me.danielpf.springplaykt.Bar
+super-class	bar	me.danielpf.springplaykt.Foo
+interfaces	bar
 *
 * */
