@@ -2,7 +2,11 @@ package me.danielpf.springplaykt
 
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
+import org.springframework.core.ResolvableType
 import org.springframework.stereotype.Component
+import kotlin.reflect.KProperty1
+import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.javaField
 
 
 /*
@@ -18,20 +22,21 @@ we can say B > D, according to https://zh.wikipedia.org/wiki/%E9%87%8C%E6%B0%8F%
 and here a transition operation T,
 
 Variance
- - Covariance -> T(B) > T(D)
- - Contravariance -> T(D) < T(B)
- - invariant -> no relationship between T(D) and T(B)
+ - Covariance -> T(B) > T(D) -> out
+ - Contravariance -> T(D) < T(B) -> in
+ - invariant -> no relationship between T(D) and T(B) -> no in no out
 
 T<out E> hits Covariance
-T(D) < T(B) < T<Any?> = T<*>, then return will be upper bond
+T(D) < T(B) < T<*> <= T<Any?>
 
 T<in E> hits Contravariance
-T(B) < T(D) < T<Nothing> = T<*>, then args will be Nothing
+T(B) < T(D) < T<*> <= T<Nothing>
 
 T<E> hits invariant
-T<B> < T(*), return will be upper bond and arg will be Nothing
-T<D> < T(*), return will be upper bond and arg will be Nothing
+T<B> < T(*), out -> Any?, in -> Nothing
+T<D> < T(*), out -> Any?, in -> Nothing
 
+* and Nothing will be resolved as Raw Types
 
 reference:
 https://kotlinlang.org/docs/generics.html#star-projections
@@ -40,21 +45,23 @@ https://www.geeksforgeeks.org/kotlin-generics/
 
 
 Output for below code
-starIns: 3
-starOuts: 3
-starNoInNoOut: 3
-anyIns: 0
-anyOuts: 3
-anyNoInNoOut: 0
-nothingIns: 3
-nothingOuts: 3
-nothingNoInNoOut: 3
-numberInIns: 1
-intInIns: 2
-numberInNoInNoOut: 1
-numberOutOuts: 2
-intOutIns: 1
-numberOutNoInNoOut: 2
+property_to_inject: anyIns	resolved_type_to_match: List<In<Any?>>	matched_beans: 0
+property_to_inject: anyNoInNoOut	resolved_type_to_match: List<NoInNoOut<Any?>>	matched_beans: 0
+property_to_inject: anyOuts	resolved_type_to_match: List<Out<Any?>>	matched_beans: 3
+property_to_inject: intInIns	resolved_type_to_match: List<In<Integer>>	matched_beans: 2
+property_to_inject: intInNoInNoOut	resolved_type_to_match: List<NoInNoOut<Integer>>	matched_beans: 2
+property_to_inject: intOutIns	resolved_type_to_match: List<Out<Integer>>	matched_beans: 1
+property_to_inject: intOutNoInNoOut	resolved_type_to_match: List<NoInNoOut<Integer>>	matched_beans: 1
+property_to_inject: nothingIns	resolved_type_to_match: List<In<>>	matched_beans: 3
+property_to_inject: nothingNoInNoOut	resolved_type_to_match: List<NoInNoOut<>>	matched_beans: 3
+property_to_inject: nothingOuts	resolved_type_to_match: List<Out<>>	matched_beans: 3
+property_to_inject: numberInIns	resolved_type_to_match: List<In<Number>>	matched_beans: 1
+property_to_inject: numberInNoInNoOut	resolved_type_to_match: List<NoInNoOut<Number>>	matched_beans: 1
+property_to_inject: numberOutNoInNoOut	resolved_type_to_match: List<NoInNoOut<Number>>	matched_beans: 2
+property_to_inject: numberOutOuts	resolved_type_to_match: List<Out<Number>>	matched_beans: 2
+property_to_inject: starIns	resolved_type_to_match: List<In<>>	matched_beans: 3
+property_to_inject: starNoInNoOut	resolved_type_to_match: List<NoInNoOut<>>	matched_beans: 3
+property_to_inject: starOuts	resolved_type_to_match: List<Out<>>	matched_beans: 3
 * */
 
 interface In<in E>
@@ -94,52 +101,283 @@ class NoInNoOutString : NoInNoOut<String>
 @Component
 class GenericsInOut(
 
+    /*
+    * Output:
+    * property_to_inject: starIns	resolved_type_to_match: List<In<>>	matched_beans: 3
+    *
+    * Explanation:
+    * in hits Contravariance, but * will be treated as Raw type, In<*> = In
+    * -> In > In<Int> > In<Number>
+    * -> In > In<String>
+    *
+    * Conclusion:
+    * 3 beans matched: In<Number>, In<Int>, In<String>
+    * */
     val starIns: List<In<*>>,
+
+    /*
+    * Output:
+    * property_to_inject: starOuts	resolved_type_to_match: List<Out<>>	matched_beans: 3
+    *
+    * Explanation:
+    * out hits Covariance, but * will be treated as Raw type, Out<*> = Out
+    * -> Out > Out<Number> > Out<Int>
+    * -> Out > Out<String>
+    *
+    * Conclusion:
+    * 3 beans matched: Out<Number>, Out<Int>, Out<String>
+    * */
     val starOuts: List<Out<*>>,
+
+    /*
+    * Output:
+    * property_to_inject: starNoInNoOut	resolved_type_to_match: List<NoInNoOut<>>	matched_beans: 3
+    *
+    * Explanation:
+    * no in no out hits invariant, but * will be treated as Raw type, NoInNoOut<*> = NoInNoOut
+    * -> NoInNoOut > NoInNoOut<Number>
+    * -> NoInNoOut > NoInNoOut<Int>
+    * -> NoInNoOut > NoInNoOut<String>
+    *
+    * Conclusion:
+    * 3 beans matched: NoInNoOut<Number>, NoInNoOut<Int>, NoInNoOut<String>
+    * */
     val starNoInNoOut: List<NoInNoOut<*>>,
 
+    /*
+    * Output:
+    * property_to_inject: anyIns	resolved_type_to_match: List<In<Any?>>	matched_beans: 0
+    *
+    * Explanation:
+    * in hits Contravariance
+    * -> In<Any?> < In<Number> < In<Int>
+    * -> In<Any?> < In<String>
+    *
+    * Conclusion:
+    * no bean matched.
+    * */
     val anyIns: List<In<Any?>>,
+
+    /*
+    * Output:
+    * property_to_inject: anyOuts	resolved_type_to_match: List<Out<Any?>>	matched_beans: 3
+    *
+    * Explanation:
+    * out hits Covariance
+    * -> Out<Any?> > Out<Number> > Out<Int>
+    * -> Out<Any?> > Out<String>
+    *
+    * Conclusion:
+    * 3 beans matched: Out<Number>, Out<Int>, Out<String>
+    * */
     val anyOuts: List<Out<Any?>>,
+
+    /*
+    * Output:
+    * property_to_inject: anyNoInNoOut	resolved_type_to_match: List<NoInNoOut<Any?>>	matched_beans: 0
+    *
+    * Explanation:
+    * no in on out hits invariant
+    *
+    * -> NoInNoOut<Any?> <> NoInNoOut<Number>
+    * -> NoInNoOut<Any?> <> NoInNoOut<Int>
+    * -> NoInNoOut<Any?> <> NoInNoOut<String>
+    *
+    * Conclusion:
+    * no bean matched.
+    * */
     val anyNoInNoOut: List<NoInNoOut<Any?>>,
 
+
+    /*
+    * Output:
+    * property_to_inject: nothingIns	resolved_type_to_match: List<In<>>	matched_beans: 3
+    *
+    * Explanation:
+    * in hits Contravariance, but Nothing will be treated as Raw type, In<Nothing> = In
+    * -> In > In<Int> > In<Number>
+    * -> In > In<String>
+    *
+    * Conclusion:
+    * 3 beans matched: In<Number>, In<Int>, In<String>
+    * */
     val nothingIns: List<In<Nothing>>,
+
+    /*
+    * Output:
+    * property_to_inject: nothingOuts	resolved_type_to_match: List<Out<>>	matched_beans: 3
+    *
+    * Explanation:
+    * out hits Covariance, but Nothing will be treated as Raw type, Out<Nothing> = Out
+    * -> Out > Out<Number> > Out<Int>
+    * -> Out > Out<String>
+    *
+    * Conclusion:
+    * 3 beans matched: Out<Number>, Out<Int>, Out<String>
+    * */
     val nothingOuts: List<Out<Nothing>>,
+
+    /*
+    * Output:
+    * property_to_inject: nothingNoInNoOut	resolved_type_to_match: List<NoInNoOut<>>	matched_beans: 3
+    *
+    * Explanation:
+    * no in no out hits invariant, but Nothing will be treated as Raw type, NoInNoOut<Nothing> = NoInNoOut
+    * -> NoInNoOut > NoInNoOut<Number>
+    * -> NoInNoOut > NoInNoOut<Int>
+    * -> NoInNoOut > NoInNoOut<String>
+    *
+    * Conclusion:
+    * 3 beans matched: NoInNoOut<Number>, NoInNoOut<Int>, NoInNoOut<String>
+    * */
     val nothingNoInNoOut: List<NoInNoOut<Nothing>>,
 
+    // ############################ Use-site variance: Type projection #############################
 
+
+    /*
+    * Projection is redundant: the corresponding type parameter of In has the same variance
+    * List<In<in Number>> = List<In<Number>>
+    * Output:
+    * property_to_inject: numberInIns	resolved_type_to_match: List<In<Number>>	matched_beans: 1
+    *
+    * Explanation:
+    * in hits Contravariance,
+    * -> In<Number> < In<Int>
+    *
+    * Conclusion:
+    * 1 bean matched: In<Number>
+    * */
     val numberInIns: List<In<in Number>>,
-    //val intInOuts: List<Out<in Int>>, // can't compile, in/out conflicts
+
+    /*
+    * Projection is redundant: the corresponding type parameter of In has the same variance
+    * List<In<in Int>> = List<In<Int>>
+    * Output:
+    * property_to_inject: intInIns	resolved_type_to_match: List<In<Integer>>	matched_beans: 2
+    *
+    * Explanation:
+    * in hits Contravariance,
+    * -> In<Number> < In<Int>
+    *
+    * Conclusion:
+    * 2 beans matched: In<Number>, In<Int>
+    * */
     val intInIns: List<In<in Int>>,
+
+    /*
+    * Projection is required
+    * Output:
+    * property_to_inject: numberInNoInNoOut	resolved_type_to_match: List<NoInNoOut<Number>>	matched_beans: 1
+    *
+    * Explanation:
+    * in hits Contravariance,
+    * -> In<Number> < In<Int>
+    *
+    * Conclusion:
+    * 1 bean matched: In<Number>
+    * */
     val numberInNoInNoOut: List<NoInNoOut<in Number>>,
 
-    // val numberOutIns: List<In<out Number>>, // can't compile, in/out conflicts
+    /*
+    * Projection is required
+    * Output:
+    * property_to_inject: intInNoInNoOut	resolved_type_to_match: List<NoInNoOut<Integer>>	matched_beans: 2
+    *
+    * Explanation:
+    * in hits Contravariance,
+    * -> In<Number> < In<Int>
+    *
+    * Conclusion:
+    * 2 beans matched: In<Number>, In<Int>
+    * */
+    val intInNoInNoOut: List<NoInNoOut<in Int>>,
+
+
+    /*
+    * Projection is redundant: the corresponding type parameter of In has the same variance
+    * List<Out<out Number>> = List<Out<Number>>
+    * Output:
+    * property_to_inject: numberOutOuts	resolved_type_to_match: List<Out<Number>>	matched_beans: 2
+    *
+    * Explanation:
+    * out hits Covariance,
+    * -> Out<Number> > Out<Int>
+    *
+    * Conclusion:
+    * 2 beans matched: Out<Number>, Out<Int>
+    * */
     val numberOutOuts: List<Out<out Number>>,
+
+    /*
+    * Projection is redundant: the corresponding type parameter of In has the same variance
+    * Output:
+    * property_to_inject: intOutIns	resolved_type_to_match: List<Out<Integer>>	matched_beans: 1
+    *
+    * Explanation:
+    * out hits Covariance,
+    * -> Out<Number> > Out<Int>
+    *
+    * Conclusion:
+    * 1 bean matched: Out<Int>
+    * */
     val intOutIns: List<Out<out Int>>,
-    val numberOutNoInNoOut: List<NoInNoOut<out Number>>
+
+
+    /*
+    * Projection is required
+    * Output:
+    * property_to_inject: numberOutNoInNoOut	resolved_type_to_match: List<NoInNoOut<Number>>	matched_beans: 2
+    *
+    * Explanation:
+    * out hits Covariance,
+    * -> Out<Number> > Out<Int>
+    *
+    * Conclusion:
+    * 2 beans matched: Out<Number>, Out<Int>
+    * */
+    val numberOutNoInNoOut: List<NoInNoOut<out Number>>,
+
+    /*
+    * Projection is required
+    * Output:
+    * property_to_inject: intOutNoInNoOut	resolved_type_to_match: List<NoInNoOut<Integer>>	matched_beans: 1
+    *
+    * Explanation:
+    * out hits Covariance,
+    * -> Out<Number> > Out<Int>
+    *
+    * Conclusion:
+    * 1 bean matched: Out<Int>
+    * */
+    val intOutNoInNoOut: List<NoInNoOut<out Int>>
+
+    // Projection is conflicting with variance of the corresponding type parameter of Out. Remove the projection or replace it with '*'
+    // val intInOuts: List<Out<in Int>>, // can't compile, in/out conflicts
+    // val numberOutIns: List<In<out Number>>, // can't compile, in/out conflicts
 
 ) : ApplicationRunner {
 
-    override fun run(args: ApplicationArguments?) {
+    override fun run(args: ApplicationArguments?) = this::class.memberProperties
+        .map { it as KProperty1<Any, List<*>> }.forEach(this::printGenerics)
 
-        println("starIns: ${starIns.size}")
-        println("starOuts: ${starOuts.size}")
-        println("starNoInNoOut: ${starNoInNoOut.size}")
+    private fun printGenerics(kp: KProperty1<Any, List<*>>) = run {
 
-        println("anyIns: ${anyIns.size}")
-        println("anyOuts: ${anyOuts.size}")
-        println("anyNoInNoOut: ${anyNoInNoOut.size}")
+        val t1 = ResolvableType.forField(kp.javaField!!)
+        val t2 = t1.generics[0]
+        val t3 = t2.generics[0]
 
-        println("nothingIns: ${nothingIns.size}")
-        println("nothingOuts: ${nothingOuts.size}")
-        println("nothingNoInNoOut: ${nothingNoInNoOut.size}")
+        val typeName = resolvedTypeName(resolveClassName(t1), resolveClassName(t2), resolveClassName(t3))
+        println("property_to_inject: ${kp.name}\tresolved_type_to_match: $typeName\tmatched_beans: ${kp.get(this).size}")
+    }
 
-        println("numberInIns: ${numberInIns.size}")
-        println("intInIns: ${intInIns.size}")
-        println("numberInNoInNoOut: ${numberInNoInNoOut.size}")
+    private fun resolvedTypeName(n1: String?, n2: String?, n3: String?) = "$n1<$n2<$n3>>"
 
-        println("numberOutOuts: ${numberOutOuts.size}")
-        println("intOutIns: ${intOutIns.size}")
-        println("numberOutNoInNoOut: ${numberOutNoInNoOut.size}")
-
+    private fun resolveClassName(resolvableType: ResolvableType) = resolvableType.resolve()?.simpleName.let {
+        when (it) {
+            null -> ""
+            "Object" -> "Any?"
+            else -> it
+        }
     }
 }
