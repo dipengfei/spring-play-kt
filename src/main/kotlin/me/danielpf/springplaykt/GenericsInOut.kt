@@ -466,5 +466,20 @@ np.produce();
 
 we can see even though Covariance is intuitive, it will also bring troubles.
 we can't just only use variance and invariant, the key point is how to tradeoff.
+
+* in one word: generics should be designed as invariant basically, and can be limited variance.
+* Java's solution:
+* -> generics is invariant
+* -> array is variance (even sometimes it's bad)
+* -> wildcard with bounds
+*
+* Kotlin's solution
+* -> generics is invariant
+* -> array is also invariant since array is also generics in kotlin
+* -> Declaration-site variance(using in and out) and Use-site variance: Type projection
+*
+*
+*
+*
 *
 * */
