@@ -381,3 +381,90 @@ class GenericsInOut(
         }
     }
 }
+
+/*
+* PS: Why Generics can't be designed as Covariance, see below example by assuming it could be Covariance
+*
+class NumberProducer {
+
+    private List<Number> queue;
+
+    Producer(List<Number> queue) {
+        this.queue = queue;
+    }
+
+    public void produce() {
+        queue.add(0);
+        queue.add(1L);
+        queue.add(2.0d);
+    }
+
+}
+
+class IntegerConsumer {
+
+    private List<Integer> queue;
+
+    IntegerConsumer(List<Integer> queue) {
+        this.queue = queue;
+    }
+
+    public void consume() {
+        for(Integer i : queue) {
+            System.out.println(i);
+        }
+    }
+}
+
+List<Integer> queue = new ArrayList<>();
+// Assume Generics is Covariance, it can be compiled
+// because List<Integer> is subtype of  List<Number>
+NumberProducer np = new NumberProducer(queue);
+np.produce();
+
+IntegerConsumer ic = new IntegerConsumer(queue)
+// ClassCastException occurred when processing 1L, Long can't be casted to Integer
+ic.consume();
+
+Java Array is designed as Covariance, also can't avoid above issue.
+class NumberProducer {
+
+    private Number[] queue;
+
+    Producer(Number[] queue) {
+        this.queue = queue;
+    }
+
+    public void produce() {
+        queue[0](0);
+        queue[1](1L);
+        queue[2](2.0d);
+    }
+
+}
+
+class IntegerConsumer {
+
+    Integer[] queue;
+
+    IntegerConsumer(Integer[] queue) {
+        this.queue = queue;
+    }
+
+    public void consume() {
+        for(Integer i : queue) {
+            System.out.println(i);
+        }
+    }
+}
+
+Integer[] queue = new Integer[100];
+// Array is Covariance, it can be compiled
+NumberProducer np = new NumberProducer(queue);
+// ClassCastException occurred when processing 1L, Long can't be casted to Integer
+np.produce();
+
+we can see even though Covariance is intuitive, it will also bring troubles.
+we can't just only use variance and invariant, the key point is how to tradeoff.
+*
+* */
