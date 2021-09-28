@@ -471,12 +471,12 @@ we can't just only use variance and invariant, the key point is how to tradeoff.
 * Java's solution:
 * -> generics is invariant
 * -> array is variance (even sometimes it's bad)
-* -> wildcard with bounds
+* -> limited variance: wildcard with bounds
 *
 * Kotlin's solution
 * -> generics is invariant
 * -> array is also invariant since array is also generics in kotlin
-* -> Declaration-site variance(using in and out) and Use-site variance: Type projection
+* -> limited variance: Declaration-site variance(using in and out) and Use-site variance: Type projection
 *
 *
 *
